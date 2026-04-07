@@ -18,7 +18,9 @@ import java.util.UUID
  * - "Idempotent" means: calling the same operation multiple times has the same result
  *   as calling it once. Essential for network retries in mobile apps.
  */
-class LikeService {
+class LikeService(
+    private val notificationService: com.instagram.features.notification.application.NotificationService
+) {
 
     suspend fun likePost(userId: UUID, postId: UUID): Unit =
         newSuspendedTransaction {
@@ -27,6 +29,17 @@ class LikeService {
                 it[LikesTable.postId] = postId
             }.insertedCount
             // insertIgnore returns 0 if the row already existed — silently ignore
+            if (inserted > 0) {
+                // Find post owner to notify
+                val postOwner = com.instagram.infrastructure.database.tables.PostsTable
+                    .select(com.instagram.infrastructure.database.tables.PostsTable.userId)
+                    .where { com.instagram.infrastructure.database.tables.PostsTable.id eq postId }
+                    .singleOrNull()?.get(com.instagram.infrastructure.database.tables.PostsTable.userId)
+                
+                if (postOwner != null && postOwner != userId) {
+                    notificationService.sendPushNotification(postOwner, "New Like", "Someone liked your post!")
+                }
+            }
         }
 
     suspend fun unlikePost(userId: UUID, postId: UUID): Unit =

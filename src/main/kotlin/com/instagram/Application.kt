@@ -2,6 +2,7 @@ package com.instagram
 
 import com.instagram.plugins.*
 import io.ktor.server.application.*
+import org.koin.ktor.ext.getKoin
 
 /**
  * Application entry point.
@@ -28,4 +29,10 @@ fun Application.module() {
     configureRouting()
     configureStatusPages()
     configureHTTP()
+    
+    val worker = getKoin().get<com.instagram.features.story.application.StoryEvictionWorker>()
+    worker.start()
+    
+    val fanoutWorker = getKoin().get<com.instagram.features.feed.application.FeedFanoutWorker>()
+    fanoutWorker.start()
 }

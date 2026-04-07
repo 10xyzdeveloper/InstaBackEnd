@@ -20,9 +20,11 @@ class RedisFeedCacheService(
 
     override suspend fun getCachedFeed(userId: UUID): List<PostDto>? {
         return jedisPool.resource.use { jedis ->
-            val cached = jedis.get("feed:$userId") ?: return null
+            val cachedList = jedis.lrange("feed_list:$userId", 0, -1)
+            if (cachedList.isNullOrEmpty()) return null
+            
             try {
-                json.decodeFromString<List<PostDto>>(cached)
+                cachedList.map { json.decodeFromString<PostDto>(it) }
             } catch (e: Exception) {
                 null
             }
@@ -30,16 +32,24 @@ class RedisFeedCacheService(
     }
 
     override suspend fun cacheFeed(userId: UUID, posts: List<PostDto>) {
+        if (posts.isEmpty()) return
         jedisPool.resource.use { jedis ->
-            val serialized = json.encodeToString(posts)
-            // Cache for 5 minutes (300 seconds)
-            jedis.setex("feed:$userId", 300, serialized)
+            val key = "feed_list:$userId"
+            val pipeline = jedis.pipelined()
+            pipeline.del(key)
+            posts.forEach { post ->
+                val serialized = json.encodeToString(post)
+                pipeline.rpush(key, serialized) // rpush since posts are ordered descending
+            }
+            // Cache for 5 minutes
+            pipeline.expire(key, 300)
+            pipeline.sync()
         }
     }
 
     override suspend fun invalidateFeed(userId: UUID) {
         jedisPool.resource.use { jedis ->
-            jedis.del("feed:$userId")
+            jedis.del("feed_list:$userId")
         }
     }
 }

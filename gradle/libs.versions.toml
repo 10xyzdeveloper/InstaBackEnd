@@ -13,6 +13,8 @@ mockk                = "1.13.14"
 testcontainers       = "1.20.4"
 kotlinx-datetime     = "0.6.1"
 jedis                = "5.1.0"
+firebase-admin       = "9.2.0"
+elasticsearch        = "8.13.0"
 
 [libraries]
 # Ktor Server
@@ -57,6 +59,14 @@ aws-sdk-s3           = { module = "software.amazon.awssdk:s3",                  
 # Database Caching
 jedis                = { module = "redis.clients:jedis", version.ref = "jedis" }
 
+# Push Notifications
+firebase-admin       = { module = "com.google.firebase:firebase-admin", version.ref = "firebase-admin" }
+
+# Elasticsearch
+elasticsearch-java   = { module = "co.elastic.clients:elasticsearch-java", version.ref = "elasticsearch" }
+jackson-databind     = { module = "com.fasterxml.jackson.core:jackson-databind", version = "2.17.0" }
+jackson-module-kotlin= { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.17.0" }
+
 # Logging
 logback-classic      = { module = "ch.qos.logback:logback-classic",              version.ref = "logback" }
 
@@ -65,6 +75,7 @@ kotlin-test-junit5   = { module = "org.jetbrains.kotlin:kotlin-test-junit5",    
 mockk                = { module = "io.mockk:mockk",                              version.ref = "mockk" }
 testcontainers-core  = { module = "org.testcontainers:testcontainers",           version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql",               version.ref = "testcontainers" }
+testcontainers-elasticsearch = { module = "org.testcontainers:elasticsearch",         version.ref = "testcontainers" }
 
 [plugins]
 kotlin-jvm           = { id = "org.jetbrains.kotlin.jvm",           version.ref = "kotlin" }

@@ -16,6 +16,9 @@ import com.instagram.features.post.domain.PostRepository
 import com.instagram.features.user.application.UserService
 import com.instagram.features.user.data.UserRepositoryImpl
 import com.instagram.features.user.domain.UserRepository
+import com.instagram.features.story.application.StoryService
+import com.instagram.features.story.data.StoryRepository
+import com.instagram.features.story.data.StoryRepositoryImpl
 import com.instagram.infrastructure.cache.FeedCacheService
 import com.instagram.infrastructure.cache.RedisFeedCacheService
 import com.instagram.infrastructure.storage.LocalStorageService
@@ -78,34 +81,39 @@ val appModule = module {
     single {
         val config = get<Application>().environment.config
         AuthService(
-            authRepo      = get<AuthRepository>(),
-            jwtSecret     = config.property("jwt.secret").getString(),
-            jwtIssuer     = config.property("jwt.issuer").getString(),
-            jwtAudience   = config.property("jwt.audience").getString(),
-            accessExpiry  = config.property("jwt.accessExpiry").getString().toLong(),
-            refreshExpiry = config.property("jwt.refreshExpiry").getString().toLong()
-        )
+            authRepo = get(),
+            jwtSecret = config.property("jwt.secret").getString(),
+            jwtIssuer = config.property("jwt.issuer").getString(),
+            jwtAudience = config.property("jwt.audience").getString(),
+            accessExpiry = config.property("jwt.accessExpiry").getString().toLong(),
+            refreshExpiry = config.property("jwt.refreshExpiry").getString().toLong(),
+            searchService = getOrNull()
+        ) 
     }
+
+    // ── Search ────────────────────────────────────────────────────────────────
+    single { com.instagram.features.search.application.SearchService() }
 
     // ── User ──────────────────────────────────────────────────────────────────
     single<UserRepository> { UserRepositoryImpl() }
-    single { UserService(userRepo = get(), storageService = get()) }
+    single { UserService(userRepo = get(), storageService = get(), searchService = getOrNull()) }
 
     // ── Post ──────────────────────────────────────────────────────────────────
     single<PostRepository> { PostRepositoryImpl() }
-    single { PostService(postRepo = get(), storageService = get()) }
+    single { PostService(postRepo = get(), storageService = get(), feedFanoutWorker = getOrNull()) }
 
     // ── Follow ────────────────────────────────────────────────────────────────
-    single { FollowService() }
+    single { FollowService(notificationService = get()) }
 
     // ── Like ──────────────────────────────────────────────────────────────────
-    single { LikeService() }
+    single { LikeService(notificationService = get()) }
 
     // ── Comment ───────────────────────────────────────────────────────────────
-    single { CommentService() }
+    single { CommentService(notificationService = get()) }
 
     // ── Feed ──────────────────────────────────────────────────────────────────
     single { FeedService(get()) }
+    single { com.instagram.features.feed.application.FeedFanoutWorker(jedisPool = get()) }
 
     // ── Explore ───────────────────────────────────────────────────────────────
     single { ExploreService() }
@@ -113,4 +121,22 @@ val appModule = module {
     // ── Chat ──────────────────────────────────────────────────────────────────
     single { ChatSessionManager() }
     single { ChatService(sessionManager = get()) }
+
+    // ── Story ─────────────────────────────────────────────────────────────────
+    single<StoryRepository> { StoryRepositoryImpl() }
+    single { StoryService(storyRepository = get()) }
+    single { com.instagram.features.story.application.StoryEvictionWorker(storyRepository = get()) }
+
+    // ── Notification ──────────────────────────────────────────────────────────
+    single<com.instagram.features.notification.data.DeviceTokenRepository> { 
+        com.instagram.features.notification.data.DeviceTokenRepositoryImpl() 
+    }
+    single { 
+        val firebaseEnabled = System.getenv("FIREBASE_ENABLED") == "true"
+        com.instagram.features.notification.application.NotificationService(
+            deviceTokenRepository = get(),
+            firebaseEnabled = firebaseEnabled
+        ) 
+    }
 }
+

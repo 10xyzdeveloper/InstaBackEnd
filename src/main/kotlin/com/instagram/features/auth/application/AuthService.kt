@@ -32,7 +32,8 @@ class AuthService(
     private val jwtIssuer: String,
     private val jwtAudience: String,
     private val accessExpiry: Long,    // seconds
-    private val refreshExpiry: Long    // seconds
+    private val refreshExpiry: Long,   // seconds
+    private val searchService: com.instagram.features.search.application.SearchService? = null
 ) {
     private val algorithm = Algorithm.HMAC256(jwtSecret)
 
@@ -48,6 +49,16 @@ class AuthService(
             }
             throw e
         }
+        
+        searchService?.indexUser(
+            com.instagram.features.search.application.UserIndexDto(
+                id = userId.toString(),
+                username = req.username,
+                fullName = "",
+                avatarUrl = null
+            )
+        )
+        
         return issueTokenPair(userId, req.username)
     }
 

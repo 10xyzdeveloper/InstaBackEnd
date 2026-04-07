@@ -10,6 +10,8 @@ import com.instagram.features.like.routes.likeRoutes
 import com.instagram.features.comment.routes.commentRoutes
 import com.instagram.features.chat.routes.chatRoutes
 import com.instagram.features.chat.routes.chatSocketRoute
+import com.instagram.features.notification.routes.notificationRoutes
+import com.instagram.features.story.routes.storyRoutes
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -41,6 +43,8 @@ fun Application.configureRouting() {
             likeRoutes()
             commentRoutes()
             chatRoutes()
+            notificationRoutes()
+            storyRoutes()
         }
 
         // WebSocket — separate from REST prefix

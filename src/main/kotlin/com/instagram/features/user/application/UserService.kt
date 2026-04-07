@@ -22,7 +22,8 @@ import java.util.UUID
  */
 class UserService(
     private val userRepo: UserRepository,
-    private val storageService: StorageService
+    private val storageService: StorageService,
+    private val searchService: com.instagram.features.search.application.SearchService? = null
 ) {
     suspend fun getProfileByUsername(username: String, viewerId: UUID?): UserProfileDto {
         return userRepo.findByUsername(username, viewerId)
@@ -37,6 +38,19 @@ class UserService(
     suspend fun updateProfile(userId: UUID, req: UpdateProfileRequest) {
         req.bio?.let       { userRepo.updateBio(userId, it) }
         req.isPrivate?.let { userRepo.updatePrivacy(userId, it) }
+        
+        // Re-index to ES
+        val profile = userRepo.findById(userId, null)
+        if (profile != null) {
+            searchService?.indexUser(
+                com.instagram.features.search.application.UserIndexDto(
+                    id = profile.id,
+                    username = profile.username,
+                    fullName = "", // Full name would be added to schema later
+                    avatarUrl = profile.avatarUrl
+                )
+            )
+        }
     }
 
     /**
@@ -67,8 +81,22 @@ class UserService(
             part.dispose()
         }
 
-        avatarUrl?.let { userRepo.updateAvatar(userId, it) }
-            ?: throw com.instagram.common.exceptions.BadRequestException("No avatar file provided")
+        avatarUrl?.let { 
+            userRepo.updateAvatar(userId, it) 
+            
+            // Re-index to ES
+            val profile = userRepo.findById(userId, null)
+            if (profile != null) {
+                searchService?.indexUser(
+                    com.instagram.features.search.application.UserIndexDto(
+                        id = profile.id,
+                        username = profile.username,
+                        fullName = "",
+                        avatarUrl = profile.avatarUrl
+                    )
+                )
+            }
+        } ?: throw com.instagram.common.exceptions.BadRequestException("No avatar file provided")
     }
 
     suspend fun searchUsers(query: String): List<UserSearchResult> {

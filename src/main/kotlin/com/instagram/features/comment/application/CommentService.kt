@@ -18,7 +18,9 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.util.UUID
 
-class CommentService {
+class CommentService(
+    private val notificationService: com.instagram.features.notification.application.NotificationService
+) {
 
     suspend fun addComment(userId: UUID, postId: UUID, req: CreateCommentRequest): CommentDto {
         if (req.body.isBlank()) throw BadRequestException("Comment body cannot be empty")
@@ -43,6 +45,23 @@ class CommentService {
                 it[CommentsTable.parentId] = parentId
                 it[CommentsTable.body]     = req.body
             }[CommentsTable.id]
+
+            val targetUserId = if (parentId == null) {
+                com.instagram.infrastructure.database.tables.PostsTable
+                    .select(com.instagram.infrastructure.database.tables.PostsTable.userId)
+                    .where { com.instagram.infrastructure.database.tables.PostsTable.id eq postId }
+                    .singleOrNull()?.get(com.instagram.infrastructure.database.tables.PostsTable.userId)
+            } else {
+                CommentsTable
+                    .select(CommentsTable.userId)
+                    .where { CommentsTable.id eq parentId }
+                    .singleOrNull()?.get(CommentsTable.userId)
+            }
+
+            if (targetUserId != null && targetUserId != userId) {
+                 notificationService.sendPushNotification(targetUserId, "New Comment", "Someone left a comment on your post!")
+            }
+
             queryComment(commentId, userId)!!
         }
     }

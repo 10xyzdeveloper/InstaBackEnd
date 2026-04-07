@@ -17,6 +17,10 @@ kotlin {
     jvmToolchain(21)
 }
 
+configurations.all {
+    exclude(group = "com.google.guava", module = "listenablefuture")
+}
+
 application {
     mainClass.set("io.ktor.server.netty.EngineMain")
 }
@@ -66,6 +70,14 @@ dependencies {
     // AWS S3 ───────────────────────────────────────────────────────────────
     implementation(libs.aws.sdk.s3)
 
+    // ── Push Notifications ───────────────────────────────────────────────────
+    implementation(libs.firebase.admin)
+
+    // ── Search ───────────────────────────────────────────────────────────────
+    implementation(libs.elasticsearch.java)
+    implementation(libs.jackson.databind)
+    implementation(libs.jackson.module.kotlin)
+
     // ── Logging ──────────────────────────────────────────────────────────────
     implementation(libs.logback.classic)
 
@@ -77,6 +89,7 @@ dependencies {
     testImplementation(libs.koin.test)
     testImplementation(libs.testcontainers.core)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.elasticsearch)
 }
 
 tasks.test {

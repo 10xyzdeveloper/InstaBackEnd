@@ -20,7 +20,9 @@ import java.util.UUID
  * - Follower/following counts are derived from the follows table at query time.
  *   At scale you'd cache these in Redis with INCR/DECR.
  */
-class FollowService {
+class FollowService(
+    private val notificationService: com.instagram.features.notification.application.NotificationService
+) {
 
     suspend fun follow(followerId: UUID, followingId: UUID) {
         if (followerId == followingId) throw BadRequestException("You cannot follow yourself")
@@ -47,6 +49,12 @@ class FollowService {
                 it[FollowsTable.followerId]  = followerId
                 it[FollowsTable.followingId] = followingId
                 it[FollowsTable.status]      = status
+            }
+
+            if (status == "ACTIVE") {
+                notificationService.sendPushNotification(followingId, "New Follower", "Someone started following you")
+            } else {
+                notificationService.sendPushNotification(followingId, "Follow Request", "Someone requested to follow you")
             }
         }
     }

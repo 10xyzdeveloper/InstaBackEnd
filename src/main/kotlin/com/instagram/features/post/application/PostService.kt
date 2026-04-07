@@ -19,7 +19,8 @@ import java.util.UUID
  */
 class PostService(
     private val postRepo: PostRepository,
-    private val storageService: StorageService
+    private val storageService: StorageService,
+    private val feedFanoutWorker: com.instagram.features.feed.application.FeedFanoutWorker? = null
 ) {
     companion object {
         const val MAX_MEDIA_ITEMS = 10
@@ -60,7 +61,11 @@ class PostService(
 
         if (mediaItems.isEmpty()) throw BadRequestException("At least one media file is required")
 
-        return postRepo.createPost(userId, caption, mediaItems)
+        val post = postRepo.createPost(userId, caption, mediaItems)
+        
+        feedFanoutWorker?.enqueuePost(post)
+        
+        return post
     }
 
     suspend fun getPost(postId: UUID, viewerId: UUID?): PostDto {

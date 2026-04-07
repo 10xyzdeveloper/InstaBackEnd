@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.koin.core.context.stopKoin
 import org.koin.ktor.plugin.Koin
 import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.elasticsearch.ElasticsearchContainer
 import org.testcontainers.utility.DockerImageName
 import io.ktor.server.application.*
 import org.koin.logger.slf4jLogger
@@ -30,10 +31,18 @@ abstract class IntegrationTestBase {
             .withUsername("testuser")
             .withPassword("testpass")
 
+        private val elasticsearch = ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:8.13.0"))
+            .withEnv("discovery.type", "single-node")
+            .withEnv("xpack.security.enabled", "false")
+
         @JvmStatic
         @BeforeAll
         fun startContainer() {
             postgres.start()
+            elasticsearch.start()
+            
+            System.setProperty("ELASTICSEARCH_HOST", elasticsearch.host)
+            System.setProperty("ELASTICSEARCH_PORT", elasticsearch.firstMappedPort.toString())
             
             // Run Flyway migrations directly on the testcontainer
             Flyway.configure()
@@ -47,6 +56,7 @@ abstract class IntegrationTestBase {
         @AfterAll
         fun stopContainer() {
             postgres.stop()
+            elasticsearch.stop()
         }
     }
 

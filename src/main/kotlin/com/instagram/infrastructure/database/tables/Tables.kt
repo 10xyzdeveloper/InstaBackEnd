@@ -133,3 +133,25 @@ object MessagesTable : Table("messages") {
     val createdAt      = datetime("created_at").defaultExpression(CurrentDateTime)
     override val primaryKey = PrimaryKey(id)
 }
+
+// ─── Stories ──────────────────────────────────────────────────────────────────
+
+object StoriesTable : Table("stories") {
+    val id        = uuid("id").autoGenerate()
+    val userId    = reference("user_id", UsersTable.id, onDelete = ReferenceOption.CASCADE)
+    val mediaUrl  = varchar("media_url", 512)
+    val mediaType = varchar("media_type", 10)
+    val caption   = varchar("caption", 255).nullable()
+    val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
+    override val primaryKey = PrimaryKey(id)
+}
+
+// ─── Device Tokens ────────────────────────────────────────────────────────────
+
+object DeviceTokensTable : Table("device_tokens") {
+    val id        = uuid("id").autoGenerate()
+    val userId    = reference("user_id", UsersTable.id, onDelete = ReferenceOption.CASCADE)
+    val fcmToken  = varchar("fcm_token", 512).uniqueIndex()
+    val updatedAt = datetime("updated_at").defaultExpression(CurrentDateTime)
+    override val primaryKey = PrimaryKey(id)
+}
