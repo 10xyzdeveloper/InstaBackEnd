@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: instagram-postgres
+    environment:
+      POSTGRES_DB:       instagram
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: instagram-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    container_name: instagram-backend
+    environment:
+      DATABASE_URL:      jdbc:postgresql://postgres:5432/instagram
+      DATABASE_USER:     postgres
+      DATABASE_PASSWORD: postgres
+      JWT_SECRET:        dev-secret-change-in-production
+      USE_LOCAL_STORAGE: "true"  # Use local storage instead of S3 in dev
+      PORT:              8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres_data:
+  redis_data:
